@@ -3,3 +3,4 @@ zig-out/
 .zig-cache/
 **/.zig-cache/
 **/zig-out/
+sql-api/src/data.json

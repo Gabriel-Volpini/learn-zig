@@ -1,65 +1,18 @@
 const std = @import("std");
-const zap = @import("zap");
-
-fn dispatch_routes(r: zap.Request) !void {
-    // dispatch
-    if (r.path) |the_path| {
-        if (routes.get(the_path)) |foo| {
-            try foo(r);
-            return;
-        }
-    }
-    // or default: present menu
-    try r.sendBody(
-        \\ <html>
-        \\   <body>
-        \\     <p><a href="/static">static</a></p>
-        \\     <p><a href="/dynamic">dynamic</a></p>
-        \\   </body>
-        \\ </html>
-    );
-}
-
-fn static_site(r: zap.Request) !void {
-    try r.sendBody("<html><body><h1>Hello from STATIC ZAP!</h1></body></html>");
-}
-
-var dynamic_counter: i32 = 0;
-fn dynamic_site(r: zap.Request) !void {
-    dynamic_counter += 1;
-    var buf: [128]u8 = undefined;
-    const filled_buf = try std.fmt.bufPrintZ(
-        &buf,
-        "<html><body><h1>Hello # {d} from DYNAMIC ZAP!!!</h1></body></html>",
-        .{dynamic_counter},
-    );
-    try r.sendBody(filled_buf);
-}
-
-fn setup_routes(a: std.mem.Allocator) !void {
-    routes = std.StringHashMap(zap.HttpRequestFn).init(a);
-    try routes.put("/static", static_site);
-    try routes.put("/dynamic", dynamic_site);
-}
-
-var routes: std.StringHashMap(zap.HttpRequestFn) = undefined;
+const enviroment = @import("enviroment/enviroment.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
-    try setup_routes(allocator);
+    defer _ = gpa.deinit();
 
-    var listener = zap.HttpListener.init(.{
-        .port = 7776,
-        .on_request = dispatch_routes,
-        .log = true,
-    });
-    try listener.listen();
+    var buf: [256]u8 = undefined;
+    var stdin_reader_wrapper = std.fs.File.stdin().reader(&buf);
+    const stdin = &stdin_reader_wrapper.interface;
 
-    std.debug.print("Listening on 0.0.0.0:3000\n", .{});
-
-    zap.start(.{
-        .threads = 2,
-        .workers = 2,
-    });
+    const input = try stdin.takeDelimiter('\n');
+    if (input) |i| {
+        try enviroment.init(allocator, i);
+    }
 }
+
