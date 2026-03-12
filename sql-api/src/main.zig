@@ -6,13 +6,13 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
-    var buf: [256]u8 = undefined;
-    var stdin_reader_wrapper = std.fs.File.stdin().reader(&buf);
-    const stdin = &stdin_reader_wrapper.interface;
+    // var buf: [256]u8 = undefined;
+    // var stdin_reader_wrapper = std.fs.File.stdin().reader(&buf);
+    // const stdin = &stdin_reader_wrapper.interface;
 
-    const input = try stdin.takeDelimiter('\n');
-    if (input) |i| {
-        try enviroment.init(allocator, i);
-    }
+    // const input = try stdin.takeDelimiter('\n');
+    const input: []u8 = @constCast("Dev");
+    try enviroment.init(allocator, input);
+
+    std.process.exit(0);
 }
-

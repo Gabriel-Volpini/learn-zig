@@ -28,7 +28,8 @@ pub fn init(allocator: std.mem.Allocator, envName: []u8) !void {
     const parsed = try std.json.parseFromSlice([]Enviroment, allocator, data, .{});
     defer parsed.deinit();
 
-    _ = try getCurrentEnv(parsed.value, envName);
+    const currentEnv = try getCurrentEnv(parsed.value, envName);
+    try startTunnel(allocator, currentEnv);
 }
 
 fn getCurrentEnv(envs: []Enviroment, currentEnvName: []u8) !Enviroment {
@@ -37,4 +38,29 @@ fn getCurrentEnv(envs: []Enviroment, currentEnvName: []u8) !Enviroment {
     } else {
         return error.EnvNotFound;
     }
+}
+
+fn startTunnel(allocator: std.mem.Allocator, env: Enviroment) !void {
+    var child = std.process.Child.init(&.{
+        "ssh",
+        "-i",
+        env.database.tunnel.privateKeyPath,
+        "-L",
+        try std.fmt.allocPrint(allocator, "{d}:localhost:{d}", .{
+            env.database.port,
+            env.database.port,
+        }),
+        try std.fmt.allocPrint(allocator, "{s}@{s}", .{
+            env.database.tunnel.user,
+            env.database.tunnel.host,
+        }),
+    }, allocator);
+
+    //NOTE:
+    // child.stdout_behavior = .Inherit;
+    // child.stderr_behavior = .Inherit;
+    // child.stdin_behavior = .Inherit;
+
+    try child.spawn();
+    _ = try child.wait();
 }
